@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import VideoPlayerWithCaptions from './VideoPlayerWithCaptions';
 import { TextToSpeechService } from '../lib/ttsService';
 import { generateCaptions, estimateAudioDuration, type CaptionSegment } from '../lib/captionGenerator';
+import { extractTextFromPDF } from '../lib/pdfExtractor';
 
 const PDFToSpeechApp: React.FC = () => {
   const { toast } = useToast();
@@ -19,18 +20,6 @@ const PDFToSpeechApp: React.FC = () => {
 
   // Background video URL - you can change this to your desired video
   const BACKGROUND_VIDEO_URL = '/background-video.mp4'; // Place your video in the public folder
-
-  const extractTextFromPDF = async (file: File): Promise<string> => {
-    try {
-      const arrayBuffer = await file.arrayBuffer();
-      const pdfParse = (await import('pdf-parse')).default;
-      const data = await pdfParse(arrayBuffer);
-      return data.text;
-    } catch (error) {
-      console.error('Error extracting text from PDF:', error);
-      throw new Error('Failed to extract text from PDF');
-    }
-  };
 
   const generateSpeechAndCaptions = async (text: string): Promise<{ audioUrl: string; captions: CaptionSegment[] }> => {
     const ttsService = TextToSpeechService.getInstance();
@@ -64,7 +53,7 @@ const PDFToSpeechApp: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      // Step 1: Extract text from PDF
+      // Step 1: Extract text from PDF using the new extraction method
       const text = await extractTextFromPDF(file);
       
       if (!text.trim()) {
@@ -89,9 +78,10 @@ const PDFToSpeechApp: React.FC = () => {
 
     } catch (error) {
       console.error('Error processing PDF:', error);
+      const errorMessage = error instanceof Error ? error.message : "There was an error creating your video. Please try again.";
       toast({
         title: "Processing failed",
-        description: "There was an error creating your video. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
